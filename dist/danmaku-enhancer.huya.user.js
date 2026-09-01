@@ -12,6 +12,13 @@
 (() => {
   // src/core/config.js
   var DEFAULTS = {
+    // 控制面板:embedded=内嵌站点原生弹层 / floating=独立可拖动浮窗
+    panelMode: "embedded",
+    panelX: null,
+    // 浮窗位置(拖动后持久化);null 时用 CSS 默认角落
+    panelY: null,
+    panelOpen: false,
+    // 浮窗是否展开(收起时只留小标题条,不遮挡界面)
     // 飘屏弹幕前缀
     showNick: true,
     showBadge: true,
@@ -31,6 +38,16 @@
   };
   var pct = (v) => Math.round(v * 100) + "%";
   var PANEL_SCHEMA = [
+    { type: "title", text: "控制面板" },
+    {
+      type: "select",
+      key: "panelMode",
+      label: "面板位置",
+      options: [
+        { value: "embedded", label: "内嵌原生" },
+        { value: "floating", label: "独立浮窗" }
+      ]
+    },
     { type: "title", text: "弹幕昵称增强" },
     { type: "switch", key: "showNick", label: "显示昵称" },
     { type: "switch", key: "showBadge", label: "粉丝牌" },
@@ -377,6 +394,110 @@
     return sec;
   }
 
+  // src/core/floating-panel.js
+  var DRAG_THRESHOLD = 3;
+  function createFloatingPanel({ getCfg, save }) {
+    let wrap = null;
+    let body = null;
+    let toggle = null;
+    function setCollapsed(collapsed, persist) {
+      wrap.classList.toggle("de-float-collapsed", collapsed);
+      toggle.textContent = collapsed ? "▸" : "▾";
+      if (persist) {
+        getCfg().panelOpen = !collapsed;
+        save();
+      }
+    }
+    function clamp(el, x, y) {
+      const maxX = Math.max(0, window.innerWidth - el.offsetWidth);
+      const maxY = Math.max(0, window.innerHeight - el.offsetHeight);
+      return [Math.max(0, Math.min(x, maxX)), Math.max(0, Math.min(y, maxY))];
+    }
+    function makeDraggable(handle, el) {
+      let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false, moved = false;
+      handle.addEventListener("pointerdown", (e) => {
+        if (e.target.closest(".de-float-toggle")) return;
+        dragging = true;
+        moved = false;
+        const r = el.getBoundingClientRect();
+        ox = r.left;
+        oy = r.top;
+        sx = e.clientX;
+        sy = e.clientY;
+        el.style.right = "auto";
+        handle.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      handle.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - sx;
+        const dy = e.clientY - sy;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) moved = true;
+        const [nx, ny] = clamp(el, ox + dx, oy + dy);
+        el.style.left = nx + "px";
+        el.style.top = ny + "px";
+      });
+      const end = (e) => {
+        if (!dragging) return;
+        dragging = false;
+        try {
+          handle.releasePointerCapture(e.pointerId);
+        } catch (err) {
+        }
+        if (!moved) return;
+        const cfg = getCfg();
+        cfg.panelX = parseInt(el.style.left, 10) || 0;
+        cfg.panelY = parseInt(el.style.top, 10) || 0;
+        save();
+      };
+      handle.addEventListener("pointerup", end);
+      handle.addEventListener("pointercancel", end);
+    }
+    function build() {
+      wrap = document.createElement("div");
+      wrap.className = "de-float";
+      const bar = document.createElement("div");
+      bar.className = "de-float-bar";
+      const title = document.createElement("span");
+      title.className = "de-float-title";
+      title.textContent = "弹幕增强";
+      toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "de-float-toggle";
+      bar.append(title, toggle);
+      body = document.createElement("div");
+      body.className = "de-float-body";
+      wrap.append(bar, body);
+      (document.fullscreenElement || document.body).appendChild(wrap);
+      makeDraggable(bar, wrap);
+      toggle.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setCollapsed(!wrap.classList.contains("de-float-collapsed"), true);
+      });
+      document.addEventListener("fullscreenchange", () => {
+        const target = document.fullscreenElement || document.body;
+        if (wrap && wrap.parentElement !== target) target.appendChild(wrap);
+      });
+      const cfg = getCfg();
+      if (typeof cfg.panelX === "number" && typeof cfg.panelY === "number") {
+        const [nx, ny] = clamp(wrap, cfg.panelX, cfg.panelY);
+        wrap.style.left = nx + "px";
+        wrap.style.top = ny + "px";
+        wrap.style.right = "auto";
+      }
+      setCollapsed(!cfg.panelOpen, false);
+    }
+    function mount(sectionEl) {
+      if (!wrap) build();
+      if (sectionEl.parentElement !== body) body.appendChild(sectionEl);
+      wrap.style.display = "";
+    }
+    function hide() {
+      if (wrap) wrap.style.display = "none";
+    }
+    return { mount, hide };
+  }
+
   // src/core/colors.js
   function badgeColor(level2) {
     const lv = parseInt(level2, 10) || 0;
@@ -424,6 +545,18 @@
 .de-fx-left-bottom{left:12px;bottom:64px;}
 .de-fx-right-bottom{right:12px;bottom:64px;}
 
+/* 独立可拖动控制面板。固定定位、只占自身区域,收起时仅剩标题条。 */
+.de-float{position:fixed;top:80px;right:16px;z-index:2147483000;width:248px;background:rgba(20,20,22,.94);color:#fff;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.45);user-select:none;}
+.de-float-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;cursor:move;border-bottom:1px solid rgba(255,255,255,.1);}
+.de-float-title{font-weight:700;font-size:12px;}
+.de-float-toggle{cursor:pointer;background:none;border:none;color:#fff;font-size:12px;line-height:1;padding:2px 4px;}
+.de-float-body{padding:0 12px 12px;max-height:70vh;overflow-y:auto;}
+.de-float-collapsed{width:auto;}
+.de-float-collapsed .de-float-body{display:none;}
+.de-float-collapsed .de-float-bar{border-bottom:none;}
+.de-float #de-panel{position:static;}
+.de-float #de-panel .de-divider:first-child{display:none;}
+
 /* 设置面板通用控件(平台负责定位与背景)。 */
 #de-panel{--de-accent:#ff9600;box-sizing:border-box;color:#fff;font-size:12px;}
 #de-panel .de-divider{height:1px;background:rgba(255,255,255,.12);margin:2px 0 6px;}
@@ -455,6 +588,7 @@
     const chatMap = createChatMap(MAP_MAX);
     const seenIds = /* @__PURE__ */ new Set();
     const fixed = createFixedChat(platform, () => cfg, colors);
+    const floating = createFloatingPanel({ getCfg: () => cfg, save: () => store.save(cfg) });
     let cfgVer = 0;
     function onChange() {
       store.save(cfg);
@@ -513,6 +647,7 @@
       document.documentElement.style.setProperty("--de-op", cfg.opacity);
       cfgVer++;
       applyMode();
+      ensurePanel();
       refresh();
     }
     function addStyle(id, css) {
@@ -528,11 +663,19 @@
     }
     let panelEl = null;
     function ensurePanel() {
-      if (!platform.panel || !platform.panel.mount) return;
       if (!panelEl) {
-        panelEl = buildPanel(PANEL_SCHEMA, cfg, platform.panel.switchClasses, onChange);
+        const sc = platform.panel ? platform.panel.switchClasses : null;
+        panelEl = buildPanel(PANEL_SCHEMA, cfg, sc, onChange);
       }
-      platform.panel.mount(panelEl);
+      if (cfg.panelMode === "floating") {
+        if (platform.panel && platform.panel.unmount) platform.panel.unmount();
+        floating.mount(panelEl);
+      } else if (platform.panel && platform.panel.mount) {
+        floating.hide();
+        platform.panel.mount(panelEl);
+      } else {
+        floating.mount(panelEl);
+      }
     }
     const danmuObserver = new MutationObserver(refresh);
     const chatObserver = new MutationObserver(refresh);
@@ -656,6 +799,14 @@
         const extra = sec.offsetParent ? sec.offsetHeight + 8 : 340;
         pane.style.setProperty("--de-ph", baseH + extra + "px");
         return true;
+      },
+      // 切到浮窗模式时还原原生弹层(分区节点由浮窗接管,此处只需撤掉顶高)。
+      unmount() {
+        const pane = document.querySelector(".player-danmu-pane");
+        if (!pane) return;
+        pane.classList.remove("de-has-sec");
+        pane.style.removeProperty("--de-ph");
+        pane.style.removeProperty("--de-base");
       }
     },
     // 面板挂进原生弹层的定位(通用控件样式在 core styles)。padding 左24/右22 与原生行左右边缘对齐。

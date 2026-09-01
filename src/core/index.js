@@ -4,6 +4,7 @@ import { createChatMap } from './chat-map.js';
 import { renderPrefix } from './prefix.js';
 import { createFixedChat } from './fixed-chat.js';
 import { buildPanel } from './panel.js';
+import { createFloatingPanel } from './floating-panel.js';
 import { badgeColor, consumeColor } from './colors.js';
 import { CORE_CSS } from './styles.js';
 
@@ -21,6 +22,7 @@ export function createEngine(platform) {
   const chatMap = createChatMap(MAP_MAX);
   const seenIds = new Set();
   const fixed = createFixedChat(platform, () => cfg, colors);
+  const floating = createFloatingPanel({ getCfg: () => cfg, save: () => store.save(cfg) });
   let cfgVer = 0; // 并入前缀签名,配置一变即触发全部重建
 
   function onChange() {
@@ -86,6 +88,7 @@ export function createEngine(platform) {
     document.documentElement.style.setProperty('--de-op', cfg.opacity);
     cfgVer++;
     applyMode();
+    ensurePanel();
     refresh();
   }
 
@@ -103,11 +106,19 @@ export function createEngine(platform) {
 
   let panelEl = null;
   function ensurePanel() {
-    if (!platform.panel || !platform.panel.mount) return;
     if (!panelEl) {
-      panelEl = buildPanel(PANEL_SCHEMA, cfg, platform.panel.switchClasses, onChange);
+      const sc = platform.panel ? platform.panel.switchClasses : null;
+      panelEl = buildPanel(PANEL_SCHEMA, cfg, sc, onChange);
     }
-    platform.panel.mount(panelEl);
+    if (cfg.panelMode === 'floating') {
+      if (platform.panel && platform.panel.unmount) platform.panel.unmount();
+      floating.mount(panelEl);
+    } else if (platform.panel && platform.panel.mount) {
+      floating.hide();
+      platform.panel.mount(panelEl);
+    } else {
+      floating.mount(panelEl); // 平台未提供内嵌挂载点时退回浮窗
+    }
   }
 
   const danmuObserver = new MutationObserver(refresh);

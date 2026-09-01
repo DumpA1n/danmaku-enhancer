@@ -27,6 +27,18 @@ export const CORE_CSS = `
 .de-fx-left-bottom{left:12px;bottom:64px;}
 .de-fx-right-bottom{right:12px;bottom:64px;}
 
+/* 独立可拖动控制面板。固定定位、只占自身区域,收起时仅剩标题条。 */
+.de-float{position:fixed;top:80px;right:16px;z-index:2147483000;width:248px;background:rgba(20,20,22,.94);color:#fff;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.45);user-select:none;}
+.de-float-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;cursor:move;border-bottom:1px solid rgba(255,255,255,.1);}
+.de-float-title{font-weight:700;font-size:12px;}
+.de-float-toggle{cursor:pointer;background:none;border:none;color:#fff;font-size:12px;line-height:1;padding:2px 4px;}
+.de-float-body{padding:0 12px 12px;max-height:70vh;overflow-y:auto;}
+.de-float-collapsed{width:auto;}
+.de-float-collapsed .de-float-body{display:none;}
+.de-float-collapsed .de-float-bar{border-bottom:none;}
+.de-float #de-panel{position:static;}
+.de-float #de-panel .de-divider:first-child{display:none;}
+
 /* 设置面板通用控件(平台负责定位与背景)。 */
 #de-panel{--de-accent:#ff9600;box-sizing:border-box;color:#fff;font-size:12px;}
 #de-panel .de-divider{height:1px;background:rgba(255,255,255,.12);margin:2px 0 6px;}

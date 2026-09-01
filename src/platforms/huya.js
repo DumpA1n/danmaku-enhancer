@@ -106,6 +106,14 @@ export const huya = {
       pane.style.setProperty('--de-ph', baseH + extra + 'px');
       return true;
     },
+    // 切到浮窗模式时还原原生弹层(分区节点由浮窗接管,此处只需撤掉顶高)。
+    unmount() {
+      const pane = document.querySelector('.player-danmu-pane');
+      if (!pane) return;
+      pane.classList.remove('de-has-sec');
+      pane.style.removeProperty('--de-ph');
+      pane.style.removeProperty('--de-base');
+    },
   },
 
   // 面板挂进原生弹层的定位(通用控件样式在 core styles)。padding 左24/右22 与原生行左右边缘对齐。

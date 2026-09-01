@@ -2,6 +2,11 @@
 // 面板由 buildPanel(PANEL_SCHEMA, ...) 生成,新增控件只需在此追加一项。
 
 export const DEFAULTS = {
+  // 控制面板:embedded=内嵌站点原生弹层 / floating=独立可拖动浮窗
+  panelMode: 'embedded',
+  panelX: null, // 浮窗位置(拖动后持久化);null 时用 CSS 默认角落
+  panelY: null,
+  panelOpen: false, // 浮窗是否展开(收起时只留小标题条,不遮挡界面)
   // 飘屏弹幕前缀
   showNick: true,
   showBadge: true,
@@ -23,6 +28,16 @@ export const DEFAULTS = {
 const pct = (v) => Math.round(v * 100) + '%';
 
 export const PANEL_SCHEMA = [
+  { type: 'title', text: '控制面板' },
+  {
+    type: 'select',
+    key: 'panelMode',
+    label: '面板位置',
+    options: [
+      { value: 'embedded', label: '内嵌原生' },
+      { value: 'floating', label: '独立浮窗' },
+    ],
+  },
   { type: 'title', text: '弹幕昵称增强' },
   { type: 'switch', key: 'showNick', label: '显示昵称' },
   { type: 'switch', key: 'showBadge', label: '粉丝牌' },
