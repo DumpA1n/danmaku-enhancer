@@ -50,7 +50,7 @@ export function createFixedChat(platform, getCfg, colors) {
     if (cfg.showNick) {
       const nk = document.createElement('span');
       nk.className = 'de-fixed-nick';
-      nk.textContent = (info.nick || '') + '：';
+      nk.textContent = info.nick || '';
       line.appendChild(nk);
     }
     const msg = document.createElement('span');

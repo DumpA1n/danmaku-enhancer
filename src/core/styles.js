@@ -20,7 +20,7 @@ export const CORE_CSS = `
 .de-fixed-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,.35);border-radius:3px;}
 .de-fixed .de-pill{font-size:calc(var(--de-fx-fs,13px) - 1px);height:auto;line-height:1.4;padding:0 5px;margin-right:3px;}
 .de-line{margin:3px 0;word-break:break-word;text-shadow:0 1px 1px rgba(0,0,0,.6);}
-.de-fixed-nick{font-weight:700;color:#ffd36b;}
+.de-fixed-nick{font-weight:700;color:#ffd36b;margin-right:5px;}
 .de-fixed-msg{color:#fff;}
 .de-fx-left-top{left:12px;top:12px;}
 .de-fx-right-top{right:12px;top:12px;}
@@ -38,6 +38,11 @@ export const CORE_CSS = `
 .de-float-collapsed .de-float-bar{border-bottom:none;}
 .de-float #de-panel{position:static;}
 .de-float #de-panel .de-divider:first-child{display:none;}
+/* 浮窗中站点原生开关类的 CSS 不生效,用结构选择器兜底开关外观(不影响内嵌模式)。 */
+.de-float #de-panel .de-sw > *:last-child{position:relative;flex:none;width:36px;height:18px;border-radius:9px;background:#555;transition:background .15s;}
+.de-float #de-panel .de-sw > *:last-child.de-on{background:var(--de-accent);}
+.de-float #de-panel .de-sw > *:last-child > *{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .15s;}
+.de-float #de-panel .de-sw > *:last-child.de-on > *{left:20px;}
 
 /* 设置面板通用控件(平台负责定位与背景)。 */
 #de-panel{--de-accent:#ff9600;box-sizing:border-box;color:#fff;font-size:12px;}
